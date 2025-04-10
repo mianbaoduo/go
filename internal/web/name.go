@@ -8,11 +8,11 @@ const encodedIDPrefix = ":"
 
 var bannedNames = map[string]bool{
 	"api":     true,
-	"edit":    true,
+	"edit":    false,
 	"healthz": true,
-	"links":   true,
-	"s":       true,
-	"version": true,
+	"links":   false,
+	"s":       false,
+	"version": false,
 }
 
 // Parse the shortcut name from the given URL path, given the base URL that is

@@ -57,25 +57,30 @@ func ListenAndServe(
 ) error {
 	addr := viper.GetString("addr")
 	admin := viper.GetBool("admin")
-	version := viper.GetString("version")
 	host := viper.GetString("host")
 
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("/api/url/", func(w http.ResponseWriter, r *http.Request) {
+	// Internal API routes - protected by middleware
+	internalMux := http.NewServeMux()
+	internalMux.HandleFunc("/api/url/", func(w http.ResponseWriter, r *http.Request) {
 		apiURL(backend, host, w, r)
 	})
 
-	mux.HandleFunc("/api/urls/", func(w http.ResponseWriter, r *http.Request) {
+	internalMux.HandleFunc("/api/urls/", func(w http.ResponseWriter, r *http.Request) {
 		apiURLs(backend, host, w, r)
 	})
 
-	mux.HandleFunc("/api/config", func(w http.ResponseWriter, r *http.Request) {
+	internalMux.HandleFunc("/api/config", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, struct {
 			Host string `json:"host"`
 		}{host}, http.StatusOK)
 	})
 
+	// Add authentication middleware for internal routes
+	mux.Handle("/api/", authMiddleware(internalMux))
+
+	// External routes - public access
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		getDefault(backend, assets, w, r)
 	})
@@ -97,11 +102,11 @@ func ListenAndServe(
 		http.Redirect(w, r, "/", http.StatusPermanentRedirect)
 	})
 
-	mux.Handle("/s/", assets)
+	// mux.Handle("/s/", assets)
 
-	mux.HandleFunc("/version", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintln(w, version)
-	})
+	// mux.HandleFunc("/version", func(w http.ResponseWriter, r *http.Request) {
+	// 	fmt.Fprintln(w, version)
+	// })
 
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintln(w, "👍")
@@ -113,4 +118,24 @@ func ListenAndServe(
 	}
 
 	return http.ListenAndServe(addr, mux)
+}
+
+// authMiddleware provides basic authentication for internal routes
+func authMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// For now, we'll use a simple API key check
+		apiKey := r.Header.Get("X-API-Key")
+		if apiKey == "" {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+
+		// For now, we'll just check if it's not empty
+		if apiKey != viper.GetString("api-key") {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
 }

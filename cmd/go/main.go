@@ -15,6 +15,7 @@ import (
 	"github.com/kellegous/go/internal/backend"
 	"github.com/kellegous/go/internal/backend/firestore"
 	"github.com/kellegous/go/internal/backend/leveldb"
+	"github.com/kellegous/go/internal/backend/redis"
 	"github.com/kellegous/go/internal/ui"
 	"github.com/kellegous/go/internal/web"
 )
@@ -38,6 +39,13 @@ func getBackend() (backend.Backend, error) {
 		return leveldb.New(viper.GetString("data"))
 	case "firestore":
 		return firestore.New(context.Background(), viper.GetString("project"))
+	case "redis":
+		return redis.New(
+			viper.GetString("redis-addr"),
+			viper.GetString("redis-password"),
+			viper.GetInt("redis-db"),
+			viper.GetString("redis-prefix"),
+		)
 	default:
 		return nil, fmt.Errorf("unknown backend %s", viper.GetString("backend"))
 	}
@@ -69,10 +77,15 @@ func main() {
 	pflag.String("addr", ":8067", "default bind address")
 	pflag.Bool("admin", false, "allow admin-level requests")
 	pflag.String("version", "", "version string")
-	pflag.String("backend", "leveldb", "backing store to use. 'leveldb' and 'firestore' currently supported.")
+	pflag.String("backend", "leveldb", "backing store to use. 'leveldb', 'firestore', and 'redis' currently supported.")
 	pflag.String("data", "data", "The location of the leveldb data directory")
 	pflag.String("project", "", "The GCP project to use for the firestore backend. Will attempt to use application default creds if not defined.")
 	pflag.String("host", "", "The host field to use when gnerating the source URL of a link. Defaults to the Host header of the generate request")
+	pflag.String("redis-addr", "localhost:6379", "Redis server address")
+	pflag.String("redis-password", "", "Redis password")
+	pflag.Int("redis-db", 0, "Redis database number")
+	pflag.String("redis-prefix", "go:routes", "Redis key prefix")
+	pflag.String("api-key", "", "API key for internal access")
 	pflag.Var(
 		&assetProxyURL,
 		"asset-proxy-url",
