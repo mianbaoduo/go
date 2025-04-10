@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"net/http"
-	"net/http/httputil"
 	"net/url"
 	"strings"
 
@@ -16,22 +14,8 @@ import (
 	"github.com/kellegous/go/internal/backend/firestore"
 	"github.com/kellegous/go/internal/backend/leveldb"
 	"github.com/kellegous/go/internal/backend/redis"
-	"github.com/kellegous/go/internal/ui"
 	"github.com/kellegous/go/internal/web"
 )
-
-func getAssets(proxyURL *url.URL) (http.Handler, error) {
-	if proxyURL == nil {
-		return ui.Assets()
-	}
-	p := httputil.NewSingleHostReverseProxy(proxyURL)
-	dir := p.Director
-	p.Director = func(r *http.Request) {
-		dir(r)
-		r.Host = proxyURL.Host
-	}
-	return p, nil
-}
 
 func getBackend() (backend.Backend, error) {
 	switch viper.GetString("backend") {
@@ -106,10 +90,5 @@ func main() {
 	}
 	defer backend.Close()
 
-	assets, err := getAssets(assetProxyURL.URL)
-	if err != nil {
-		log.Panic(err)
-	}
-
-	log.Panic(web.ListenAndServe(backend, assets))
+	log.Panic(web.ListenAndServe(backend))
 }
