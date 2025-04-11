@@ -8,17 +8,13 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
-	"os"
-	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/kellegous/go/internal"
 	"github.com/kellegous/go/internal/backend"
-	"github.com/kellegous/go/internal/backend/leveldb"
 )
 
 type urlReq struct {
@@ -27,12 +23,7 @@ type urlReq struct {
 
 type env struct {
 	mux     *http.ServeMux
-	dir     string
 	backend backend.Backend
-}
-
-func (e *env) destroy() {
-	os.RemoveAll(e.dir)
 }
 
 func (e *env) get(path string) (*mockResponse, error) {
@@ -73,25 +64,11 @@ func (e *env) call(method, path string, body io.Reader) (*mockResponse, error) {
 }
 
 func newEnv(host string) (*env, error) {
-	dir, err := ioutil.TempDir("", "")
-	if err != nil {
-		return nil, err
-	}
-
-	backend, err := leveldb.New(filepath.Join(dir, "data"))
-	if err != nil {
-		os.RemoveAll(dir)
-		return nil, err
-	}
-
 	mux := http.NewServeMux()
-
-	Setup(mux, backend, host)
+	Setup(mux, nil, host)
 
 	return &env{
-		mux:     mux,
-		dir:     dir,
-		backend: backend,
+		mux: mux,
 	}, nil
 }
 
@@ -172,7 +149,6 @@ func mustHaveStatus(t *testing.T, res *mockResponse, status int) {
 
 func TestAPIGetNotFound(t *testing.T) {
 	e := needEnv(t, "")
-	defer e.destroy()
 
 	names := map[string]int{
 		"":              http.StatusBadRequest,
@@ -199,7 +175,6 @@ func TestAPIGetNotFound(t *testing.T) {
 
 func TestAPIPutThenGet(t *testing.T) {
 	e := needEnv(t, "")
-	defer e.destroy()
 
 	res, err := e.post("/api/url/xxx", &urlReq{
 		URL: "http://ex.com/",
@@ -237,7 +212,6 @@ func TestAPIPutThenGet(t *testing.T) {
 func TestAPIPutThenGetWithHost(t *testing.T) {
 	host := "http://test.com"
 	e := needEnv(t, host)
-	defer e.destroy()
 
 	res, err := e.post("/api/url/xxx", &urlReq{
 		URL: "http://ex.com/",
@@ -274,7 +248,6 @@ func TestAPIPutThenGetWithHost(t *testing.T) {
 
 func TestBadPuts(t *testing.T) {
 	e := needEnv(t, "")
-	defer e.destroy()
 
 	var m msgErr
 
@@ -314,7 +287,6 @@ func TestBadPuts(t *testing.T) {
 
 func TestAPIDel(t *testing.T) {
 	e := needEnv(t, "")
-	defer e.destroy()
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
@@ -349,7 +321,6 @@ func TestAPIDel(t *testing.T) {
 
 func TestAPIPutThenGetAuto(t *testing.T) {
 	e := needEnv(t, "")
-	defer e.destroy()
 
 	res, err := e.post("/api/url/", &urlReq{URL: "http://b.com/"})
 	if err != nil {
@@ -419,7 +390,6 @@ type listTest struct {
 
 func TestAPIList(t *testing.T) {
 	e := needEnv(t, "")
-	defer e.destroy()
 
 	rts := []*routeWithName{
 		&routeWithName{
@@ -588,7 +558,6 @@ func TestAPIList(t *testing.T) {
 
 func TestBadList(t *testing.T) {
 	e := needEnv(t, "")
-	defer e.destroy()
 
 	tests := map[string]int{
 		url.Values{
