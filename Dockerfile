@@ -10,4 +10,3 @@ COPY --from=build /src/bin/go /
 EXPOSE 8067
 
 ENTRYPOINT [ "/go" ]
-CMD ["--data=/data"]
