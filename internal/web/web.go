@@ -32,9 +32,7 @@ func getDefault(
 
 	rt, err := backend.Get(ctx, p)
 	if errors.Is(err, internal.ErrRouteNotFound) {
-		http.Redirect(w, r,
-			fmt.Sprintf("/edit/%s", cleanName(p)),
-			http.StatusTemporaryRedirect)
+		http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
 		return
 	} else if err != nil {
 		log.Panic(err)
