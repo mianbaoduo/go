@@ -35,7 +35,7 @@ func encodeID(id uint64) string {
 		return "0"
 	}
 
-	b = append(b, genURLPrefix)
+	// b = append(b, genURLPrefix)  // remove prefix
 
 	for id > 0 {
 		b = append(b, alpha[id%n])
