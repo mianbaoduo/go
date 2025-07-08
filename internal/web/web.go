@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/spf13/viper"
@@ -13,6 +14,25 @@ import (
 	"github.com/kellegous/go/internal"
 	"github.com/kellegous/go/internal/backend"
 )
+
+// processDomainSpecificURL handles domain-specific URL transformations
+func processDomainSpecificURL(originalURL string) string {
+	// Parse the URL to check for domain-specific rules
+	u, err := url.Parse(originalURL)
+	if err != nil {
+		// If URL parsing fails, return original URL
+		return originalURL
+	}
+
+	// Handle duxiangai.com: add www if not present
+	if u.Host == "duxiangai.com" {
+		u.Host = "www.duxiangai.com"
+		return u.String()
+	}
+
+	// Return original URL if no specific rules apply
+	return originalURL
+}
 
 // The default handler responds to most requests. It is responsible for the
 // shortcut redirects and for sending unmapped shortcuts to the edit page.
@@ -38,8 +58,11 @@ func getDefault(
 		log.Panic(err)
 	}
 
+	// Process URL for domain-specific rules before redirecting
+	targetURL := processDomainSpecificURL(rt.URL)
+
 	http.Redirect(w, r,
-		rt.URL,
+		targetURL,
 		http.StatusTemporaryRedirect)
 
 }
